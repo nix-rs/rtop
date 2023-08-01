@@ -1,7 +1,14 @@
-use std::collections::HashMap;
-use std::io;
 use std::fs;
+use std::io;
 use std::io::Read;
+
+mod sorting;
+
+use crate::sorting::{
+    status,
+    cpu_stat,
+    maps,
+};
 
 /*
  * -------------- <TODO>-----------
@@ -9,12 +16,10 @@ use std::io::Read;
  * 1. Read folder recursivley   [option]:crate: walkdir:
  * 2. make a function to read process with PID
  * 3. make another function for system wide reading
- * 4. short out which file and folder to read
- * 5. Where to find CPU usage data of per process
  *
  */
 
-const _list: [&str; 8] = ["maps", "numa_maps", "oom_score_adj", "smaps", "stat", "status", "syscall", "task/"];
+const _LIST: [&str; 8] = ["maps", "numa_maps", "oom_score_adj", "smaps", "stat", "status", "syscall", "task/"];
 
 fn main() -> io::Result<()> {
 
@@ -33,29 +38,25 @@ fn main() -> io::Result<()> {
         }
     }
 
-    // testing 
+    // testing file address
     let readfile  = fs::File::open("/proc/1/status")?;
     let mut buff = io::BufReader::new(readfile);
-    let mut content = String::new();
-    buff.read_to_string(&mut content)?;
-  //  println!("{:?}", content);
+    let mut stats = String::new();
+    buff.read_to_string(&mut stats)?;
 
-    // here awe are sorting 'status'
-    let mut fields: HashMap<&str, &str> =  HashMap::new();
-    for i in content.split("\n") {
-        let v: Vec<&str> = i.split("\t").collect();
-        if v[0] == "" {
-            continue;
-        }
-        //println!("{:?}, ----{:?}", v[0], v[1]);
-        fields.insert(
-            &v[0].trim_end_matches(":"),
-            &v[1],
-        );
+    //println!("{:#?}", status(&stats)?);
 
-    }
-    println!("{:#?}", fields);
-    //println!("dir is : {:?} \n and no. of process : {:?}", &process_no, &process_no.len());
+
+    // testing file address
+    let readfile1  = fs::File::open("/proc/1/stat")?;
+    let mut buff1 = io::BufReader::new(readfile1);
+    let mut cpu = String::new();
+    buff1.read_to_string(&mut cpu)?;
+    cpu_stat();
+
+    println!("{}", maps());
 
     Ok(())
 }
+
+
