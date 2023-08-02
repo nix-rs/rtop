@@ -1,6 +1,11 @@
 [package]
 name = "rtop"
 version = "0.1.0"
+authors = ["Aniket Mishra <aniket2contact@gmail.com>"]
+description = "Taskmanger for linux"
+repository = "https://github.com/nix-rs/rtop"
+license = "MIT"
+readme = "README.md"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
