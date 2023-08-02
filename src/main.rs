@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use std::fs;
 use std::io;
 use std::io::Read;
@@ -7,7 +9,7 @@ mod sorting;
 use crate::sorting::{
     status,
     cpu_stat,
-    maps,
+    cmdline,
 };
 
 /*
@@ -38,24 +40,23 @@ fn main() -> io::Result<()> {
         }
     }
 
+
     // testing file address
-    let readfile  = fs::File::open("/proc/1/status")?;
+    let readfile  = fs::File::open("/proc/1487/status")?;
     let mut buff = io::BufReader::new(readfile);
     let mut stats = String::new();
     buff.read_to_string(&mut stats)?;
-
-    //println!("{:#?}", status(&stats)?);
-
+    println!("{:#?}", status(&stats)?);
 
     // testing file address
-    let readfile1  = fs::File::open("/proc/1/stat")?;
+    let readfile1  = fs::File::open("/proc/1487/cmdline")?;
     let mut buff1 = io::BufReader::new(readfile1);
     let mut cpu = String::new();
     buff1.read_to_string(&mut cpu)?;
-    cpu_stat();
+    //cpu_stat();
 
-    println!("{}", maps());
-
+    cmdline(&cpu);
+    
     Ok(())
 }
 
