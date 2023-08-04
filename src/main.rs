@@ -7,9 +7,8 @@ use std::io::Read;
 mod sorting;
 
 use crate::sorting::{
-    status,
-    cpu_stat,
-    cmdline,
+    Processes,
+    System,
 };
 
 /*
@@ -19,6 +18,19 @@ use crate::sorting::{
  * 2. make a function to read process with PID
  * 3. make another function for system wide reading
  *
+ *  we read /sys for some other info
+ *
+
+found it..
+
+/proc/diskstats
+
+the 6th and 10th columns are respectively read blocks and write blocks, to get the value in bytes, multiply with 512..
+
+/sys/block/sdX/stat
+
+the 3rd and 7th values are respectively the same as above
+
  */
 
 const _LIST: [&str; 8] = ["maps", "numa_maps", "oom_score_adj", "smaps", "stat", "status", "syscall", "task/"];
@@ -40,23 +52,13 @@ fn main() -> io::Result<()> {
         }
     }
 
+    //let mut process = Processes::new(2201);
+    //process.call();
+    //println!("name: '{}'; mem: {}; threads: {}; state: {}; cpu: {}; command: {}; user: {}; pid: {}",
+    //    process.name(), process.mem(), process.threads(), process.state(), process.cpu(), process.command(), process.user(), process.pid());
 
-    // testing file address
-    let readfile  = fs::File::open("/proc/1487/status")?;
-    let mut buff = io::BufReader::new(readfile);
-    let mut stats = String::new();
-    buff.read_to_string(&mut stats)?;
-    println!("{:#?}", status(&stats)?);
-
-    // testing file address
-    let readfile1  = fs::File::open("/proc/1487/cmdline")?;
-    let mut buff1 = io::BufReader::new(readfile1);
-    let mut cpu = String::new();
-    buff1.read_to_string(&mut cpu)?;
-    //cpu_stat();
-
-    cmdline(&cpu);
-    
+    let mut sys = System::new();
+    println!("{:?}", sys.mem_s());
     Ok(())
 }
 
