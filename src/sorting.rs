@@ -1,12 +1,15 @@
+use std::error::Error;
 use std::fs;
 use std::fs::read_link;
-use std::io;
+use std::io::{self, ErrorKind};
 use std::collections::HashMap;
 use std::io::Read;
 use std::{
     thread,
     time,
 };
+
+use crate::error::CustomError;
 
 /*----------- FUTURE ADDON -----------
  * 1. Read the /proc/<pid>/io file to tell process wise i/o for debugging
@@ -21,8 +24,39 @@ enum State {
 
 }
 
+fn read_file(path : &String) -> Result<String, io::Error> {
+    let readfile  = fs::File::open(path)?;
+    let mut buff = io::BufReader::new(readfile);
+    let mut content = String::new();
+    buff.read_to_string(&mut content)?;
+
+    Ok(content)
+}
+
+/// Here we are reading the main 'stat' file to get the total time
+/// of all CPUs cumulatively
+fn main_cpu_ticks()  -> f32 {
+    let path = "/proc/stat".to_string();
+    let stats = read_file(&path).unwrap();
+
+    let mut ticks: f32 = 0.0;
+
+    for i in stats.lines() {
+        for j in i.split(" ") {
+            //println!("{j}");
+            if j.parse::<i32>().is_ok() {
+                let x = j.parse::<f32>().unwrap();
+                ticks += x;
+            }
+        }
+        break;
+    }
+    //println!("{ticks}");
+    ticks
+}
+
 #[derive(Debug)]
-pub struct Processes {
+pub struct Process {
     name: String,
     ppid: i32,
     state: String,
@@ -34,9 +68,9 @@ pub struct Processes {
     pid: i32,
 }
 
-impl Processes {
+impl Process {
     pub fn new(id: i32) -> Self {
-        Processes {
+        Process {
             name: "".to_string(),
             ppid: 0,
             state: "".to_string(),
@@ -64,7 +98,14 @@ impl Processes {
     /// * UID
     fn status(&mut self) {
         let path = format!("/proc/{}/status", self.pid);
-        let content = read_file(&path).expect("STATSU : I guess path is wrong");
+        println!("E---->{}",&path);
+        let content = match read_file(&path) {
+            Ok(s) => s,
+            Err(e) => match e.kind() {
+                ErrorKind::NotFound => "".to_string(),
+                _ => panic!("EEEEEEEEEEEE out"),
+            },
+        };
         let mut fields: HashMap<&str, &str> = HashMap::new();
 
         for i in content.split("\n") {
@@ -87,12 +128,12 @@ impl Processes {
             }
         }
 
-        self.name = (*fields.get("Name").unwrap()).to_string();
-        self.state = (*fields.get("State").unwrap()).to_string();
-        self.ppid = (*fields.get("PPid").unwrap()).parse::<i32>().unwrap();
-        self.threads = (*fields.get("Threads").unwrap()).parse::<i32>().unwrap();
-        self.mem = (*fields.get("VmRSS").unwrap()).parse::<i32>().unwrap();
-        self.user = (*fields.get("Uid").unwrap()).to_string();
+        self.name = (*fields.get("Name").unwrap_or(&"n")).to_string();
+        self.state = (*fields.get("State").unwrap_or(&"s")).to_string();
+        self.ppid = (*fields.get("PPid").unwrap_or(&"0")).parse::<i32>().unwrap();
+        self.threads = (*fields.get("Threads").unwrap_or(&"0")).parse::<i32>().unwrap();
+        self.mem = (*fields.get("VmRSS").unwrap_or(&"0")).parse::<i32>().unwrap();
+        self.user = (*fields.get("Uid").unwrap_or(&"0")).to_string();
     }
 
     /// Here we are reading per process cpu usages
@@ -105,7 +146,13 @@ impl Processes {
         let mut stime_after: f32 = 0.0;
 
         let path = format!("/proc/{}/stat", self.pid);
-        let cont = read_file(&path).unwrap();
+        let cont = match read_file(&path) {
+            Ok(s) => s,
+            Err(e) => match e.kind() {
+                ErrorKind::NotFound => "".to_string(),
+                _ => panic!("EEEEEEEEEEEE out"),
+            },
+        };
 
         for (i, j) in cont.split(" ").enumerate() {
             if i == 13 {
@@ -116,11 +163,17 @@ impl Processes {
         }
 
         // sleep for 5 sec.
-        let second = time::Duration::from_secs(5);
+        let second = time::Duration::from_secs(1);
         thread::sleep(second);
 
         let total_time_after: f32 = main_cpu_ticks();
-        let cont = read_file(&path).unwrap();
+        let cont = match read_file(&path) {
+            Ok(s) => s,
+            Err(e) => match e.kind() {
+                ErrorKind::NotFound => "".to_string(),
+                _ => panic!("EEEEEEEEEEEE out"),
+            },
+        };
 
         for (i, j) in cont.split(" ").enumerate() {
             if i == 13 {
@@ -132,23 +185,35 @@ impl Processes {
 
         let user_utils: f32 = 100.0 * (utime_after - utime_before) / (total_time_after - total_time_before);
         //let sys_utils: f32 = 100.0 * (stime_after - stime_before) / (total_time_after - total_time_before);
-
-        self.cpu = user_utils;
+        if cont != "".to_string() {
+            self.cpu = user_utils;
+        } else {
+            self.cpu = 0.0;
+        }
     }
 
     /// * command
     fn cmdline(&mut self) {
         let path = format!("/proc/{}/cmdline", self.pid);
-        let content = read_file(&path).unwrap();
+        let content = match read_file(&path) {
+            Ok(s) => s,
+            Err(e) => match e.kind() {
+                ErrorKind::NotFound => "".to_string(),
+                _ => panic!("EEEEEEEEEEEE out"),
+            },
+        };
 
-        self.command = content;
+        if content != "".to_string() {
+            self.command = content;
+        } else {
+            self.command = "c/m/d".to_string();
+        }
     }
 
     pub fn name(&self) -> &String {
         &self.name
-
     }
-    
+
     pub fn ppid(&self) -> &i32 {
         &self.ppid
     }
@@ -184,40 +249,6 @@ impl Processes {
 
 
 
-fn read_file(path : &String) -> Result<String, io::Error> {
-    let readfile  = fs::File::open(path)?;
-    let mut buff = io::BufReader::new(readfile);
-    let mut content = String::new();
-    buff.read_to_string(&mut content)?;
-
-    Ok(content)
-}
-
-
-
-
-/// Here we are reading the main 'stat' file to get the total time
-/// of all CPUs cumulatively
-fn main_cpu_ticks()  -> f32 {
-    let path = "/proc/stat".to_string();
-    let stats = read_file(&path).unwrap();
-
-    let mut ticks: f32 = 0.0;
-
-    for i in stats.lines() {
-        for j in i.split(" ") {
-            //println!("{j}");
-            if j.parse::<i32>().is_ok() {
-                let x = j.parse::<f32>().unwrap();
-                ticks += x;
-            }
-        }
-        break;
-    }
-    //println!("{ticks}");
-
-    ticks
-}
 
 pub struct System {
     process_nos: i32,
@@ -295,7 +326,7 @@ impl System {
                 if j == 0 && ( k == "intr"
                     || k == "page"
                     || k == "swap"
-                    || k == "disk_io" 
+                    || k == "disk_io"
                     || k == "ctxt"
                     || k == "btime"
                     || k == "processes"
@@ -319,7 +350,7 @@ impl System {
         }
 
          // sleep for 5 sec.
-        let second = time::Duration::from_secs(1);
+        let second = time::Duration::from_secs(0);
         thread::sleep(second);
 
         let content1 = read_file(&path).unwrap();
@@ -357,7 +388,6 @@ impl System {
         }
         
         let mut v: Vec<f32> = Vec::new();
-        println!("len: {}", set_after.len());
 
         for c in 0..set_before.len() {
             let mut i_b = 0.0;
@@ -406,11 +436,64 @@ impl System {
         self.mem_s = v;
     }
 
+    // ---------- INCORRECT VALUE ---------------
+    fn i_o(&mut self) {
+        let path = "/proc/diskstats".to_string();
+        let content = read_file(&path).unwrap();
+
+        let mut read_b: Vec<f32> = Vec::new();
+        let mut write_b: Vec<f32> = Vec::new();
+        'mai: for i in content.lines() {
+            for (x,y) in i.split_whitespace().enumerate() {
+                if x == 2 && !y.starts_with("nvme0") {
+                    continue 'mai;
+                } else if x == 5 {
+                    read_b.push(y.parse::<f32>().unwrap());
+                } else if x == 9 {
+                    write_b.push(y.parse::<f32>().unwrap());
+                }
+            }
+        }
+
+        let sec = 0.0;
+
+         // sleep for 5 sec.
+        let second = time::Duration::from_secs(sec as u64);
+        thread::sleep(second);
+
+        let content1 = read_file(&path).unwrap();
+
+        let mut read_a: Vec<f32> = Vec::new();
+        let mut write_a: Vec<f32> = Vec::new();
+        'mai: for i in content1.lines() {
+            for (x,y) in i.split_whitespace().enumerate() {
+                if x == 2 && !y.starts_with("nvme0") {
+                    continue 'mai;
+                } else if x == 5 {
+                    read_a.push(y.parse::<f32>().unwrap());
+                } else if x == 9 {
+                    write_a.push(y.parse::<f32>().unwrap());
+                }
+            }
+        }
+
+        let mut cal_r: Vec<f32> = Vec::new();
+        let mut cal_w: Vec<f32> = Vec::new();
+        // in kB/
+        for i in 0..read_a.len() {
+
+            cal_r.push((((read_a[i] - read_b[i]) / sec) * 512.0) / 1024.0);
+            cal_w.push((((write_a[i] - write_b[i]) / sec) * 512.0) / 1024.0);
+        }
+        println!("r: {:?}kB : w: {:?}kb",cal_r, cal_w);
+    }
+
     pub fn call_s(&mut self) {
         &self.inet();
         &self.cpu();
         &self.mem();
         &self.uptime();
+        &self.i_o();
     }
 
     pub fn process_nos(&self) -> &i32 {
