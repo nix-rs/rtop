@@ -1,82 +1,152 @@
 #![allow(unused)]
-
-use crossterm::event::{self, KeyEvent, KeyCode, Event};
-use std::fs;
-use std::io;
-use std::io::ErrorKind;
-use std::io::Read;
-use std::process;
-
-pub mod error;
-mod sorting;
-mod terminal;
-
-use crate::terminal::get_size;
-
-use crate::sorting::{
-    Process,
-    System,
+use std::{
+    io::{self, Read, stdout, Write, ErrorKind, stdin, Stdin},
+    time, thread, sync::{Arc, Mutex}, collections::HashMap,
 };
 
-/*
- * -------------- <TODO>-----------
- *
- * 1. Read folder recursivley   [option]:crate: walkdir:
- * 2. make a function to read process with PID
- * 3. make another function for system wide reading
- *
- *  we read /sys for some other info
- *
- * $ lslogins will use to get the username wih userid
-found it..
+pub mod data;
+mod ui;
 
-/proc/diskstats
+use termion::{
+    raw::{IntoRawMode, RawTerminal},
+    screen::{IntoAlternateScreen, AlternateScreen},
+    cursor::{Hide, Goto},
+    input::TermRead,
+    event::Key, terminal_size, async_stdin,
+    clear,
+};
 
-the 6th and 10th columns are respectively read blocks and write blocks, to get the value in bytes, multiply with 512..
+use crate::ui::{
+    Ui,
+    Position,
+};
 
-/sys/block/sdX/stat
+use crate::data::{
+    Process,
+    System,
+    all_process,
+    Data,
+    find_partitions,
+    users,
+    processes,
+    to_cal_cpu,
+    cal_disk_used,
+};
 
-the 3rd and 7th values are respectively the same as above
+/// -- Future Impl
+///  * sorting the processes
+///  * set the custom refresh time
+///  * sorting of Process
+///  * implement threading for accurate data like
+///     - some time porcess numbers didnt mathes with data
+///       because of time gap.
+///  * CPU UI for octa core
+///  * Get rid of Clone().
 
- */
+/// BUGS
+/// * DATA Bugs
+///             - show the linux version
+///             - day impl on Uptime
+///             - remove the disk free calculation from disk_stat
+///             - we are not using the CPU name
+/// * ui        - key indicator
+///             - color net
+///             - add more rows to 'ui_other'
+/// * thread handling of some routine
 
 fn main() -> io::Result<()> {
 
-    loop {
-        let processes = processes();
+    let stdin = async_stdin();
+    let mut stdout = stdout().into_raw_mode().unwrap().into_alternate_screen().unwrap();
+    write!(stdout, "{}", termion::cursor::Hide);
 
-        for process in processes.iter() {
-            let mut p = Process::new(*process);
-            p.call_p();
-            println!("cmd:{};\ncpu:{};\nname:{}\nmem:{}\nuser:{}\nthreads:{}\npid:{}\nppid:{}\nstate:{}",
-                p.command(), p.cpu(), p.name(), p.mem(), p.user(), p.threads(), p.ppid(), p.pid(), p.state());
-        }
+    let uid = users();
+    let free_space = cal_disk_used();
+    let mut uii = Ui::new(stdout, stdin, uid, free_space);
+    uii.start();
 
-        let mut sys = System::new();
-        sys.call_s();
-        println!("cpuS : {:?}; memS : {:?}; Uptime : {}; net : {:?}", sys.cpu_s(), sys.mem_s(), sys.uptime(), sys.net());
-    }
-    //print!("{:?}", get_size());
+    //let mut sys = System::new();
+    //sys.call_s();
+    
+    //let s = cal_disk_used();
+    //println!("{:?}", s);
+
     Ok(())
 }
 
-// here we are reading all the running processes
-fn processes() -> Vec<i32> {
-    // here we are taking all processes ID
-    let mut process_no: Vec<i32> = Vec::new();
-    let paths = fs::read_dir("/proc").unwrap();
+/*
+fn main() -> io::Result<()> {
+    thread::scope(|s| {
+        let stdin = async_stdin();
+        let mut stdout = stdout().into_raw_mode().unwrap().into_alternate_screen().unwrap();
+        write!(stdout, "{}", termion::cursor::Hide);
+        let uid = users();
+        let mut  uii = Ui::new(stdout, stdin, uid);
+        //uii.start();
+        let mut sys = System::new();
 
-    for path in paths {
-        let che = path
-            .unwrap()
-            .file_name()
-            .into_string()
-            .unwrap();
-        if che.parse::<i32>().is_ok() {
-            process_no.push(che.parse::<i32>().unwrap())
+        s.spawn(move || {
+            sys.call_s();
+            uii.ui_io(sys.disk_stat(), sys.io_s());
+            //self.ui_mem(&sys.mem_s());
+            //self.ui_net();
+            //self.ui_cpu(sys.cpu_s(), sys.cpu_temp(), sys.cpu_speed_n_info(), sys.cpu_cores());
+            //self.ui_other(sys.uptime(), sys.battery(), sys.process_nos());
+            //self.stdout.flush().unwrap();
+            //write!(self.stdout, "{}", clear::All);
+            //let second = time::Duration::from_secs(1);
+            //thread::sleep(second);
+
+
+        });
+
+        s.spawn( move|| {
+            loop {
+                if let Err(e) = uii.key() {
+                    panic!("oppps: {}", e);
+                }
+                uii.ui();
+                uii.ui_proces();
+        }
+        } );
+
+
+    Ok(())
+
+    })
+}
+*/
+
+/*
+    pub fn start(&mut self) {
+        let mut sys = System::new();
+        loop {
+            thread::scope(|s| {
+                //sys.call_s();
+                //s.spawn(|| {
+
+                //})
+            });
+            //sys.call_s();
+            //thread::scope(|scope| {
+                if let Err(e) = self.key() {
+                    panic!("oops {}", e);
+                }
+                self.ui_proces();
+           // });
+
+            self.ui();
+            //self.ui_io(sys.disk_stat(), sys.io_s());
+            //self.ui_mem(&sys.mem_s());
+            //self.ui_net();
+            //self.ui_cpu(sys.cpu_s(), sys.cpu_temp(), sys.cpu_speed_n_info(), sys.cpu_cores());
+            //self.ui_other(sys.uptime(), sys.battery(), sys.process_nos());
+            self.stdout.flush().unwrap();
+            write!(self.stdout, "{}", clear::All);
+            //let second = time::Duration::from_secs(1);
+            //thread::sleep(second);
+
         }
     }
-    process_no
-}
-
+*/
 
