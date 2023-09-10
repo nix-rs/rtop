@@ -1,7 +1,7 @@
 use std::{
     io::{Write, Read}, process,
     collections::HashMap, 
-    ffi::OsStr,},
+    ffi::OsStr,
 };
 use termion::{
     color,

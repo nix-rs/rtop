@@ -31,7 +31,7 @@ pub fn all_process() -> Vec<Vec<Data>> {
         }
     }
 
-    for _ in processes().iter() {
+    for i in processes().iter() {
         let mut inner_vec: Vec<Data> = Vec::new();
         let mut process = Process::new(*i);
         process.call_p();
