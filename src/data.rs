@@ -1,8 +1,5 @@
-use std::error::Error;
 use std::path::Path;
-use std::thread::Thread;
 use std::{fs, vec};
-use std::fs::read_link;
 use std::io::{self, ErrorKind};
 use std::collections::HashMap;
 use std::io::Read;
@@ -10,7 +7,7 @@ use std::{
     thread,
     time,
 };
-use std::process::{Command, Output, Stdio};
+use std::process::Command;
 
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
@@ -34,7 +31,7 @@ pub fn all_process() -> Vec<Vec<Data>> {
         }
     }
 
-    for i in processes().iter() {
+    for _ in processes().iter() {
         let mut inner_vec: Vec<Data> = Vec::new();
         let mut process = Process::new(*i);
         process.call_p();
@@ -79,12 +76,12 @@ pub fn to_cal_cpu() -> Vec<f32> {
     if after.len() != before.len() {
         let dif = after.len().abs_diff(before.len());
         if after.len() > before.len() {
-            for i in 0..dif {
+            for _ in 0..dif {
                 before.push(0.0);
                 before_total.push(0.0);
             }
         } else {
-            for i in 0..dif {
+            for _ in 0..dif {
                 after.push(0.0);
                 after_total.push(0.0);
             }
@@ -690,7 +687,7 @@ impl System {
 
         let mut read_after: Vec<f32> = Vec::new();
         let mut write_after: Vec<f32> = Vec::new();
-        'mai: for i in after_content.lines() {
+        for i in after_content.lines() {
             let mut temp: Vec<&str> = i.split_whitespace().collect();
             if temp[2] == disk[0] || temp[2] == disk[1] || temp[2] == disk[2] {
                 read_after.push(temp[5].parse::<f32>()

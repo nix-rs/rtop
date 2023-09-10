@@ -1,16 +1,11 @@
 use std::{
-    io::{stdout,Write, Read}, process,
-    fmt::{format, write}, string,
+    io::{Write, Read}, process,
     collections::HashMap, 
-    ffi::OsStr, thread, time, sync::{Arc, Mutex},
+    ffi::OsStr,},
 };
 use termion::{
-    raw::{RawTerminal, IntoRawMode},
-    screen::{AlternateScreen, IntoAlternateScreen},
-    color::{self, White},
+    color,
     cursor::{self,Goto}, terminal_size,
-    event::Key,
-    input::TermRead,
     clear, style,
 };
 use crate::data::{
@@ -222,7 +217,7 @@ impl<'a, R : Read, W : Write> Ui<R, W> {
 
     fn kill(&mut self) {
         let os_str = OsStr::new(&self.to_kill);
-        let process = process::Command::new("kill")
+        let _process = process::Command::new("kill")
             .arg(os_str)
             .spawn()
             .expect("Failed to Kill the Process");
@@ -230,15 +225,15 @@ impl<'a, R : Read, W : Write> Ui<R, W> {
 
     pub fn key(&mut self) -> Result<(), std::io::Error> {
         let mut byte = [0];
-        let k = self.stdin.read(&mut byte)?;
+        let _k = self.stdin.read(&mut byte)?;
 
         match byte[0] {
-            (b'q' | b'Q') => self.to_quit = true,
-            (b'e' | b'E') => self.kill(),             // kill a process
-            (b'w' | b'W') => {
+            b'q' | b'Q' => self.to_quit = true,
+            b'e' | b'E' => self.kill(),             // kill a process
+            b'w' | b'W' => {
                 self.position -= 1;
             },
-            (b's' | b'S') => {
+            b's' | b'S' => {
                 self.position += 1;
             },
             //b'a' => (),             // sorting up
@@ -272,7 +267,8 @@ impl<'a, R : Read, W : Write> Ui<R, W> {
             self.ui_cpu(sys.cpu_s(), sys.cpu_temp(), sys.cpu_speed_n_info(), sys.cpu_cores());
             self.ui_other(sys.uptime(), sys.battery(), sys.process_nos());
             self.stdout.flush().unwrap();
-            write!(self.stdout, "{}", clear::All);
+            write!(self.stdout, "{}", clear::All)
+                .expect("Couldn't write! from 'start'. Error_fn: start()_ui.rs_L:271");
             //let second = time::Duration::from_secs(1);
             //thread::sleep(second);
         }
@@ -480,25 +476,29 @@ impl<'a, R : Read, W : Write> Ui<R, W> {
         let mut row = 2;
         for (i,j) in data.iter().enumerate() {
             if i == 0 || i % 5 == 0 {
-                write!(self.stdout, "{}{}", Goto(col_i, row + 1), j);
+                write!(self.stdout, "{}{}", Goto(col_i, row + 1), j)
+                    .expect("Couldn't write! from 'start'. Error_fn: start()_ui.rs_L:271");
             }
             if i == 1 || i % 5 == 1 {
                 let j = j.parse::<i32>()
                     .expect("Unable to parse into i32. Error_fn: ui_net()_ui.rs_L:500");
                 let j = convert(j / 1024);
-                write!(self.stdout, "{}{}", Goto(col_ii, row), j);
+                write!(self.stdout, "{}{}", Goto(col_ii, row), j)
+                    .expect("Couldn't write! from 'start'. Error_fn: start()_ui.rs_L:271");
             }
             if i == 2 || i % 5 == 2 {
                 let j = j.parse::<i32>()
                     .expect("Unable to parse into i32. Error_fn: ui_net()_ui.rs_L:500");
                 let j = convert(j);
-               write!(self.stdout, "{}{}", Goto(col_iii, row), j);
+               write!(self.stdout, "{}{}", Goto(col_iii, row), j)
+                .expect("Couldn't write! from 'start'. Error_fn: start()_ui.rs_L:271");
             }
             if i == 3 || i % 5 == 3 {
                 let j = j.parse::<i32>()
                     .expect("Unable to parse into i32. Error_fn: ui_net()_ui.rs_L:500");
                 let j = convert(j /1024);
-              write!(self.stdout, "{}{}", Goto(col_iv, row), j);
+              write!(self.stdout, "{}{}", Goto(col_iv, row), j)
+              .expect("Couldn't write! from 'start'. Error_fn: start()_ui.rs_L:271");
             }
             if i == 4 || i % 5 == 4 {
                 let j = j.parse::<i32>()
@@ -688,7 +688,9 @@ impl<'a, R : Read, W : Write> Ui<R, W> {
         let efi_unused = 100.0 * free_disk[2]  as f32 / (data_disk[4] * 1024.0);
 
         for i in 0..col {
-            write!(self.stdout, "{}{}─",color::Fg(color::LightRed), Goto(col + i, row));
+            write!(self.stdout, "{}{}─",color::Fg(color::LightRed), Goto(col + i, row))
+                .expect("Couldn't write! from 'start'. Error_fn: start()_ui.rs_L:271");
+
         }
 
         let color_b = color::Rgb(255,0,110);

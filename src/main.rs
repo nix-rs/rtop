@@ -1,15 +1,12 @@
-use std::io::{self, Read, stdout, Write, Stdin};
+use std::io::{self, stdout, Write};
 
 pub mod data;
 mod ui;
 
 use termion::{
-    raw::{IntoRawMode, RawTerminal},
-    screen::{IntoAlternateScreen, AlternateScreen},
-    cursor::{Hide, Goto},
-    input::TermRead,
-    event::Key, terminal_size, async_stdin,
-    clear,
+    raw::IntoRawMode,
+    screen::IntoAlternateScreen,
+    async_stdin,
 };
 
 use crate::ui::Ui;
