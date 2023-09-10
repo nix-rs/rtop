@@ -12,14 +12,6 @@ use std::{
 };
 use std::process::{Command, Output, Stdio};
 
-//use crate::error::CustomError;
-
-/*----------- FUTURE ADDON -----------
- * 1. Read the /proc/<pid>/io file to tell process wise i/o for debugging
- *
- *
- *
-*/
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Data {
@@ -37,7 +29,7 @@ pub fn all_process() -> Vec<Vec<Data>> {
     let mut cpu = to_cal_cpu();
 
     if cpu.len() < processes().len() {
-        for i in 0..(cpu.len() - processes().len()) {
+        for i in 0..(processes().len() - cpu.len()) {
             cpu.push(0.0);
         }
     }

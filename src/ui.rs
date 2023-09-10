@@ -26,10 +26,6 @@ pub struct Position {
     pub y: u16,
 }
 
-/// Imporve this impl by making functions more explicit
-/// like remove new and implement default,
-/// have size fn for screen size,
-///
 /// SYNOPSYS :
 /// r - row
 /// c - column
@@ -42,7 +38,6 @@ impl Position {
         }
     }
 
-/////////////
     pub fn screen_size() -> Self {
         let mut size = terminal_size()
             .expect("Couldn't get the terminal size. Error_fn: screen_size()_ui.rs_L:48");
@@ -115,8 +110,6 @@ impl Position {
 
     // Relative
     fn row_io(&mut self) -> u16 {
-        //let point  = self.row_cpu() as f32 * 0.30;
-        //let point = (Self::screen_size().y as f32 - self.row_cpu() as f32) * 0.30;
         let point = Self::screen_size().y as f32 - 6.0;
         point as u16
     }
@@ -240,12 +233,12 @@ impl<'a, R : Read, W : Write> Ui<R, W> {
         let k = self.stdin.read(&mut byte)?;
 
         match byte[0] {
-            b'q' => self.to_quit = true,
-            b'e' => self.kill(),             // kill a process
-            b'w' => {
+            (b'q' | b'Q') => self.to_quit = true,
+            (b'e' | b'E') => self.kill(),             // kill a process
+            (b'w' | b'W') => {
                 self.position -= 1;
             },
-            b's' => {
+            (b's' | b'S') => {
                 self.position += 1;
             },
             //b'a' => (),             // sorting up
@@ -261,19 +254,12 @@ impl<'a, R : Read, W : Write> Ui<R, W> {
     pub fn start(&mut self) {
         let mut sys = System::new();
         loop {
-            //thread::scope(|s| {
-                sys.call_s();
-                //s.spawn(|| {
+            sys.call_s();
 
-                //})
-            //});
-            //sys.call_s();
-            //thread::scope(|scope| {
-                if let Err(e) = self.key() {
-                    panic!("oops {}", e);
-                }
-                self.ui_proces();
-           // });
+            if let Err(e) = self.key() {
+                panic!("oops {}", e);
+            }
+            self.ui_proces();
 
             if self.to_quit {
                 break;
@@ -295,7 +281,6 @@ impl<'a, R : Read, W : Write> Ui<R, W> {
 
         self.stdout.flush()
             .expect("Unable to flush screen. Error_fn: start()_ui.rs_L:274");
-
     }
 
     pub fn ui_mem(&mut self, data: &Vec<i32>) {
@@ -404,7 +389,6 @@ impl<'a, R : Read, W : Write> Ui<R, W> {
         ).expect("Couldn't write! from 'ui_mem'. Error_fn: ui_mem()_ui.rs_L:388");
     }
 
-    // ADD  -> key mappings
     pub fn ui_other(&mut self, uptime: &String, bat: &Vec<String>, pnos: &i32 ) {
         let mut position = Position::new();
         let col = position.col_other();
@@ -423,10 +407,11 @@ impl<'a, R : Read, W : Write> Ui<R, W> {
             .expect("Couldn't write! from 'ui_other'. Error_fn: ui_other()_ui.rs_L:401");
         write!(self.stdout, "{}{}Battery: {}{}{}%", color::Fg(color), Goto(1,3), Goto(col,3), color::Fg(bat_color), bat[1] )
             .expect("Couldn't write! from 'ui_other'. Error_fn: ui_other()_ui.rs_L:403");
-        write!(self.stdout, "{}{}Update m/s: {}[to-write]", color::Fg(color), Goto(1,4), Goto(col,4))
-            .expect("Couldn't write! from 'ui_other'. Error_fn: ui_other()_ui.rs_L:405");
-        write!(self.stdout, "{}{}Process NOS: {}{}", color::Fg(color), Goto(1,5), Goto(col,5), process_nos)
+        write!(self.stdout, "{}{}Process NOS: {}{}", color::Fg(color), Goto(1,4), Goto(col,4), process_nos)
             .expect("Couldn't write! from 'ui_other'. Error_fn: ui_other()_ui.rs_L:407");
+        write!(self.stdout, "{}{}KEYS: Up [w], down [s], Kill [e], Quit [q]", color::Fg(color), Goto(1, 10))
+            .expect("Couldn't write! from 'ui_other'. Error_fn: ui_other()_ui.rs_L:405");
+
     }
 
     fn per(val: f32) -> &'a str {
