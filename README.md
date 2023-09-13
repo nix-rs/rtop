@@ -1,4 +1,6 @@
-﻿> **WARNING !!!** This package is in **prototype** and testing stage, and only working for
+﻿[![Rust](https://github.com/nix-rs/rtop/actions/workflows/rust.yml/badge.svg)](https://github.com/nix-rs/rtop/actions/workflows/rust.yml)
+
+> **WARNING !!!** This package is in **prototype** and testing stage, and only working for
 > **Quad core** processor on **arch linux** with **SSD**.
 
 # rtop
