@@ -1,4 +1,4 @@
-﻿[![Rust](https://github.com/nix-rs/rtop/workflows/rust.yml/badge.svg?event=check_run)](https://github.com/nix-rs/rtop/actions/workflows/rust.yml)
+﻿[[Rust](https://github.com/nix-rs/rtop/workflows/Rust/badge.svg?event=check_run)](https://github.com/nix-rs/rtop/actions/workflows/rust.yml)
 
 
 > **WARNING !!!** This package is in **prototype** and testing stage, and only working for
